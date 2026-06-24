@@ -1,3 +1,11 @@
+## 0.0.25
+
+* The `buffer` config flag is honored again. With `buffer: false`, each position is uploaded directly and dropped on failure (real-time only) instead of being persisted to the retry queue. The flag had become inert after an earlier refactor, so everything was buffered regardless of the setting.
+* The `stopDetection` config flag is honored again. With `stopDetection: false`, the motion-detection components are no longer created (activity recognition + geofence on Android, motion activity + region monitoring on iOS), so tracking never pauses when the device is stationary. The flag had been ignored and stop detection always ran.
+* `HIGHEST` accuracy no longer forces stop detection off. Accuracy (the sampling regime while moving) and stationary suspension are independent, so highest accuracy can be combined with stationary battery savings.
+* The background heartbeat is only scheduled when stop detection is enabled and `heartbeatIntervalSeconds > 0`; it only emits while paused, so it had no effect otherwise.
+* Fix location filtering when `intervalSeconds` is 0. The time trigger no longer accepts every fix — which previously defeated distance filtering — and is disabled when the interval is zero, matching the angle trigger.
+
 ## 0.0.24
 
 * Android foreground service now returns `START_STICKY`, so after the OS kills the process under memory pressure it is recreated and re-foregrounded, resuming tracking from persisted state. Previously `START_NOT_STICKY` left tracking dead until an external trigger (boot, activity-recognition, geofence) fired. The failure path — initial `startForeground` blocked — still returns `START_NOT_STICKY` and calls `stopSelf()` to avoid restarting straight back into the same blocked state.
