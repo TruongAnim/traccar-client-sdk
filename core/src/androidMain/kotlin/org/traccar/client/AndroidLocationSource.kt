@@ -69,7 +69,7 @@ class AndroidLocationSource(
         }
         locationManager.requestLocationUpdates(
             locationConfig.accuracy.toAndroidProvider(),
-            if (locationConfig.distanceMeters > 0) 0L else locationConfig.intervalSeconds * 1000L,
+            locationConfig.intervalSeconds * 1000L,
             locationConfig.distanceMeters.toFloat(),
             newListener,
             Looper.getMainLooper(),

@@ -72,7 +72,7 @@ class FusedLocationSource(
         }
         val request = LocationRequest.Builder(
             locationConfig.accuracy.toFusedPriority(),
-            if (locationConfig.distanceMeters > 0) 0L else locationConfig.intervalSeconds * 1000L,
+            locationConfig.intervalSeconds * 1000L,
         )
             .setMinUpdateDistanceMeters(locationConfig.distanceMeters.toFloat())
             .build()
