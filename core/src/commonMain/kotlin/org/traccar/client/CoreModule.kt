@@ -21,9 +21,10 @@ internal fun coreModule(): Module = module {
             queue = get(),
             network = get(),
             locationSource = get(),
-            signalSources = getAll<SignalSource>(),
+            signalSources = get(),
             processors = listOf(get<LocationFilter>(), get()),
             uploader = get(),
+            buffer = get<Config>().buffer,
             scope = get(),
         )
     }

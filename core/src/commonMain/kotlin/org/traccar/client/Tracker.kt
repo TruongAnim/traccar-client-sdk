@@ -81,8 +81,12 @@ private suspend fun openKoin() = withContext(Dispatchers.IO) {
 }
 
 private suspend fun install(koin: Koin, config: Config): Tracker {
-    koin.declare(StateStore.create(koin.get()))
+    val stateStore = StateStore.create(koin.get())
+    koin.declare(stateStore)
     koin.declare(config)
+    if (!config.location.stopDetection) {
+        stateStore.update { it.copy(paused = false) }
+    }
     koin.get<TrackerEngine>()
     return koin.get<Tracker>().also { sharedTrackerInstance = it }
 }

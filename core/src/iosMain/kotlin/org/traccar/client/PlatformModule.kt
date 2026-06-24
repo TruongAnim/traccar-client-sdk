@@ -5,7 +5,6 @@ import app.cash.sqldelight.driver.native.NativeSqliteDriver
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.core.module.Module
-import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.traccar.client.db.Database
 
@@ -17,7 +16,20 @@ internal actual fun platformModule(): Module = module {
 
     single<LocationSource> { IosLocationSource(get(), get(), get()) }
 
-    single { MotionActivityDetector(get(), get(), get()) } bind SignalSource::class
-    single { RegionDetector(get(), get(), get(), get()) } bind SignalSource::class
-    single { IosBackgroundHeartbeat(get(), get(), get()) } bind SignalSource::class
+    single { MotionActivityDetector(get(), get(), get()) }
+    single { RegionDetector(get(), get(), get(), get()) }
+    single { IosBackgroundHeartbeat(get(), get(), get()) }
+
+    single<List<SignalSource>> {
+        val config = get<Config>()
+        buildList {
+            if (config.location.stopDetection) {
+                add(get<MotionActivityDetector>())
+                add(get<RegionDetector>())
+                if (config.location.heartbeatIntervalSeconds > 0) {
+                    add(get<IosBackgroundHeartbeat>())
+                }
+            }
+        }
+    }
 }

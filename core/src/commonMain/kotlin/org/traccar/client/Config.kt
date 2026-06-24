@@ -42,7 +42,7 @@ enum class Accuracy {
 
 val LocationConfig.effective: LocationConfig
     get() = if (accuracy == Accuracy.HIGHEST) {
-        copy(distanceMeters = 0, intervalSeconds = 0, stopDetection = false)
+        copy(distanceMeters = 0, intervalSeconds = 0)
     } else {
         this
     }

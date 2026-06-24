@@ -41,7 +41,6 @@ class AlarmHeartbeatTrigger(
     }
 
     private fun scheduleNext() {
-        if (intervalSeconds <= 0) return
         val triggerAt = SystemClock.elapsedRealtime() + intervalSeconds * 1000L
         AlarmManagerCompat.setAndAllowWhileIdle(
             alarmManager,

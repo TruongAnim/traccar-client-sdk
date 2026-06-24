@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.emptyFlow
 class WakeLockHolder(
     scope: ComponentCoroutineScope,
     context: Context,
-    config: Config,
     state: StateFlow<State>,
 ) : SignalSource {
 
@@ -21,10 +20,8 @@ class WakeLockHolder(
     private var wakeLock: PowerManager.WakeLock? = null
 
     init {
-        if (config.wakeLock) {
-            scope.observeState(state, { it.enabled && !it.paused }, inactive = false) { active ->
-                if (active) acquire() else release()
-            }
+        scope.observeState(state, { it.enabled && !it.paused }, inactive = false) { active ->
+            if (active) acquire() else release()
         }
     }
 

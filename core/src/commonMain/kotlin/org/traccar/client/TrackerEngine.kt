@@ -23,6 +23,7 @@ class TrackerEngine internal constructor(
     signalSources: List<SignalSource>,
     private val processors: List<PositionProcessor>,
     private val uploader: Uploader,
+    private val buffer: Boolean,
     scope: ComponentCoroutineScope,
     private val initialBackoff: Duration = 5.seconds,
     private val maxBackoff: Duration = 5.minutes,
@@ -74,8 +75,12 @@ class TrackerEngine internal constructor(
                 current = processor.process(current ?: break)
             }
             val final = current ?: return@collect
-            queue.enqueue(final)
-            pipelineWakeUp.trySend(Unit)
+            if (buffer) {
+                queue.enqueue(final)
+                pipelineWakeUp.trySend(Unit)
+            } else {
+                uploader.upload(final)
+            }
         }
     }
 

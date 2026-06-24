@@ -8,7 +8,6 @@ import com.google.android.gms.common.GoogleApiAvailability
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import org.koin.core.module.Module
-import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.traccar.client.db.Database
 
@@ -33,9 +32,26 @@ internal actual fun platformModule(): Module = module {
         }
     }
 
-    single { ActivityRecognitionDetector(get(), get(), get(), get()) } bind SignalSource::class
-    single { GeofenceDetector(get(), get(), get(), get(), get()) } bind SignalSource::class
-    single { WakeLockHolder(get(), get(), get(), get()) } bind SignalSource::class
-    single { AlarmHeartbeatTrigger(get(), get(), get(), get()) } bind SignalSource::class
-    single { ForegroundServiceHolder(get(), get(), get()) } bind SignalSource::class
+    single { ActivityRecognitionDetector(get(), get(), get(), get()) }
+    single { GeofenceDetector(get(), get(), get(), get(), get()) }
+    single { WakeLockHolder(get(), get(), get()) }
+    single { AlarmHeartbeatTrigger(get(), get(), get(), get()) }
+    single { ForegroundServiceHolder(get(), get(), get()) }
+
+    single<List<SignalSource>> {
+        val config = get<Config>()
+        buildList {
+            if (config.location.stopDetection) {
+                add(get<ActivityRecognitionDetector>())
+                add(get<GeofenceDetector>())
+                if (config.location.heartbeatIntervalSeconds > 0) {
+                    add(get<AlarmHeartbeatTrigger>())
+                }
+            }
+            if (config.wakeLock) {
+                add(get<WakeLockHolder>())
+            }
+            add(get<ForegroundServiceHolder>())
+        }
+    }
 }
