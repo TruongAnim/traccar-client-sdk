@@ -1,3 +1,8 @@
+## 1.0.0
+
+* Fix an Android crash on devices where the location provider matching the configured accuracy is not registered (`IllegalArgumentException: provider "gps" does not exist`). The SDK assumed the GPS/network/passive provider was always present, but some devices lack it (no GPS hardware, non-GMS builds). It now falls back to an available provider instead of crashing.
+* Fix an Android crash on API 29 and older (`AbstractMethodError` on `LocationListener.onProviderDisabled`). The platform interface only gained default callback methods in API 30, so a lambda listener left them unimplemented. The listener is now built with `LocationListenerCompat`, whose default implementations are bundled with the app.
+
 ## 0.0.26
 
 * Fix Android tracking staying in movement mode when the device is already stationary at start. Stop detection relies on the activity-recognition transition API, which only reports changes between activities and never the current one, so a device that was already still when tracking began never received a still-enter event and kept GPS at movement cadence — movement-interval uploads, no stationary heartbeat — until it physically moved. Tracking now takes a one-shot activity sample at startup to seed the stationary state.
