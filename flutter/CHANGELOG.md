@@ -1,3 +1,7 @@
+## 0.0.26
+
+* Fix Android tracking staying in movement mode when the device is already stationary at start. Stop detection relies on the activity-recognition transition API, which only reports changes between activities and never the current one, so a device that was already still when tracking began never received a still-enter event and kept GPS at movement cadence — movement-interval uploads, no stationary heartbeat — until it physically moved. Tracking now takes a one-shot activity sample at startup to seed the stationary state.
+
 ## 0.0.25
 
 * The `buffer` config flag is honored again. With `buffer: false`, each position is uploaded directly and dropped on failure (real-time only) instead of being persisted to the retry queue. The flag had become inert after an earlier refactor, so everything was buffered regardless of the setting.
