@@ -3,12 +3,12 @@ package org.traccar.client
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
-import android.location.LocationListener
 import android.location.LocationManager
 import android.os.CancellationSignal
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
+import androidx.core.location.LocationListenerCompat
 import androidx.core.location.LocationManagerCompat
 import kotlin.coroutines.resume
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,7 +30,7 @@ class AndroidLocationSource(
 
     override val positions = MutableSharedFlow<Position>(extraBufferCapacity = 8)
 
-    private var listener: LocationListener? = null
+    private var listener: LocationListenerCompat? = null
     private var currentLocationCancellation: CancellationSignal? = null
 
     init {
@@ -64,7 +64,7 @@ class AndroidLocationSource(
     }
 
     private fun startUpdates() {
-        val newListener = LocationListener { location ->
+        val newListener = LocationListenerCompat { location ->
             positions.tryEmit(location.toPosition())
         }
         locationManager.requestLocationUpdates(
