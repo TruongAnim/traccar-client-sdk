@@ -116,10 +116,15 @@ class AndroidLocationSource(
         speed = if (hasSpeed()) speed.toDouble() else null,
         bearing = if (hasBearing()) bearing.toDouble() else null,
     )
-}
 
-private fun Accuracy.toAndroidProvider(): String = when (this) {
-    Accuracy.HIGHEST, Accuracy.HIGH -> LocationManager.GPS_PROVIDER
-    Accuracy.MEDIUM -> LocationManager.NETWORK_PROVIDER
-    Accuracy.LOW -> LocationManager.PASSIVE_PROVIDER
+    private fun Accuracy.toAndroidProvider(): String {
+        val preferred = when (this) {
+            Accuracy.HIGHEST, Accuracy.HIGH -> LocationManager.GPS_PROVIDER
+            Accuracy.MEDIUM -> LocationManager.NETWORK_PROVIDER
+            Accuracy.LOW -> LocationManager.PASSIVE_PROVIDER
+        }
+        val available = locationManager.allProviders
+        return preferred.takeIf { it in available } ?: available.firstOrNull()
+            ?: throw IllegalStateException("No location provider available")
+    }
 }
