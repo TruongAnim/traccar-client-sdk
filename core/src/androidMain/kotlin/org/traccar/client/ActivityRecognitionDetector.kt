@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.google.android.gms.location.ActivityRecognition
+import com.google.android.gms.location.ActivityRecognitionResult
 import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.ActivityTransitionRequest
 import com.google.android.gms.location.ActivityTransitionResult
@@ -36,6 +37,7 @@ class ActivityRecognitionDetector(
     override val signals = MutableSharedFlow<Signal>(extraBufferCapacity = 8)
 
     private var pendingIntent: PendingIntent? = null
+    private var samplingPendingIntent: PendingIntent? = null
     private var stopTimeoutJob: Job? = null
 
     init {
@@ -67,11 +69,23 @@ class ActivityRecognitionDetector(
         client.requestActivityTransitionUpdates(request, newPendingIntent)
             .addOnSuccessListener { Log.log("Activity transitions registered") }
             .addOnFailureListener { Log.log("Activity transitions failed: $it") }
+
+        val newSamplingPendingIntent = PendingIntent.getBroadcast(
+            appContext,
+            1,
+            Intent(appContext, ActivityRecognitionReceiver::class.java),
+            PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        samplingPendingIntent = newSamplingPendingIntent
+        client.requestActivityUpdates(0, newSamplingPendingIntent)
+            .addOnSuccessListener { Log.log("Activity sampling requested") }
+            .addOnFailureListener { Log.log("Activity sampling failed: $it") }
     }
 
     private fun ensureUnregistered() {
         stopTimeoutJob?.cancel()
         stopTimeoutJob = null
+        stopSampling()
         pendingIntent?.let {
             client.removeActivityTransitionUpdates(it)
             Log.log("Activity transitions removed")
@@ -79,7 +93,20 @@ class ActivityRecognitionDetector(
         pendingIntent = null
     }
 
+    private fun stopSampling() {
+        samplingPendingIntent?.let { client.removeActivityUpdates(it) }
+        samplingPendingIntent = null
+    }
+
     private fun handleResult(intent: Intent) {
+        if (ActivityRecognitionResult.hasResult(intent)) {
+            handleSample(intent)
+        } else {
+            handleTransition(intent)
+        }
+    }
+
+    private fun handleTransition(intent: Intent) {
         val result = ActivityTransitionResult.extractResult(intent) ?: return
         result.transitionEvents.forEach { event ->
             Log.log("Activity transition: ${activityName(event.activityType)} ${transitionName(event.transitionType)}")
@@ -87,6 +114,15 @@ class ActivityRecognitionDetector(
             if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) onStillEnter()
             else onStillExit()
         }
+    }
+
+    private fun handleSample(intent: Intent) {
+        if (samplingPendingIntent == null) return
+        val result = ActivityRecognitionResult.extractResult(intent) ?: return
+        stopSampling()
+        val activity = result.mostProbableActivity
+        Log.log("Activity sample: ${activityName(activity.type)} ${activity.confidence}%")
+        if (activity.type == DetectedActivity.STILL) onStillEnter()
     }
 
     private fun activityName(type: Int): String = when (type) {
