@@ -15,6 +15,7 @@ import org.traccar.client.Accuracy
 import org.traccar.client.Config
 import org.traccar.client.LocationConfig
 import org.traccar.client.NotificationConfig
+import org.traccar.client.requestPosition
 import org.traccar.client.sharedTracker
 import org.traccar.client.startTracking
 
@@ -52,7 +53,7 @@ class TraccarClientSdkPlugin :
             }
             "requestPosition" -> scope.launchHandler(result) {
                 val alarm = (call.arguments as? Map<*, *>)?.get("alarm") as? String
-                sharedTracker()?.requestPosition(alarm) ?: false
+                sharedTracker()?.requestPosition(context, alarm) ?: false
             }
             "isTracking" -> scope.launchHandler(result) {
                 sharedTracker()?.state?.value?.enabled ?: false

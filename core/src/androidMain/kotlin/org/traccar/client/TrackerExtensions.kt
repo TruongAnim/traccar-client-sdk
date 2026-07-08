@@ -20,6 +20,14 @@ suspend fun Tracker.startTracking(context: Context) {
     start()
 }
 
+suspend fun Tracker.requestPosition(context: Context, alarm: String? = null): Boolean {
+    if (!ensurePermissions(context)) {
+        Log.log("Permissions denied")
+        throw IllegalStateException("Location permission denied")
+    }
+    return requestPosition(alarm)
+}
+
 private fun promptBatteryOptimization(context: Context) {
     val powerManager = context.getSystemService<PowerManager>() ?: return
     if (powerManager.isIgnoringBatteryOptimizations(context.packageName)) return

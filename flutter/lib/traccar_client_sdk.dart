@@ -128,6 +128,10 @@ class TraccarClientSdk {
   /// whether the upload succeeded. Works independently of [start] / [stop].
   /// Requires that [setConfig] has been called.
   ///
+  /// Prompts for location permission if not already granted and throws a
+  /// [PlatformException] when permission is denied (matching [start]). A
+  /// `false` return means a fix or upload failure, not a permission problem.
+  ///
   /// Pass [alarm] (e.g. `"sos"`) to tag the upload with the Traccar `alarm`
   /// protocol field. The one-off path does not buffer — a failed upload is
   /// not retried and the alarm is lost.
