@@ -1,3 +1,7 @@
+## 1.0.1
+
+* Fix an Android crash in the one-off `requestPosition` path when location permission is not granted (`SecurityException: uid ... does not have ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION`). Unlike `start`, the single-fix path went straight to the platform location API without checking permission, so the OS threw a raw `SecurityException`. It now ensures permission first — prompting the same way `start` does — and throws a clean `IllegalStateException` ("Location permission denied") on denial instead of an uncatchable-looking platform error.
+
 ## 1.0.0
 
 * Fix an Android crash on devices where the location provider matching the configured accuracy is not registered (`IllegalArgumentException: provider "gps" does not exist`). The SDK assumed the GPS/network/passive provider was always present, but some devices lack it (no GPS hardware, non-GMS builds). It now falls back to an available provider instead of crashing.
