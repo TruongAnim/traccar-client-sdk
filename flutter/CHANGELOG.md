@@ -1,6 +1,7 @@
 ## 1.0.1
 
 * Fix an Android crash in the one-off `requestPosition` path when location permission is not granted (`SecurityException: uid ... does not have ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION`). Unlike `start`, the single-fix path went straight to the platform location API without checking permission, so the OS threw a raw `SecurityException`. It now ensures permission first — prompting the same way `start` does — and throws a clean `IllegalStateException` ("Location permission denied") on denial instead of an uncatchable-looking platform error.
+* Android tracking no longer requires notification or activity-recognition permission. The permission flow now requires only fine location; when `POST_NOTIFICATIONS` is not granted the service falls back to a non-foreground start instead of forcing a foreground start, and activity-recognition registration is skipped when that permission is absent — so declining either no longer blocks tracking.
 
 ## 1.0.0
 
