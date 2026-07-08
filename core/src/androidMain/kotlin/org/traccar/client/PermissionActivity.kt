@@ -12,7 +12,11 @@ class PermissionActivity : ComponentActivity() {
     private val requestForeground = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
-        if (result.values.any { !it }) finishWith(false) else maybeRequestBackground()
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
+            finishWith(false)
+        } else {
+            maybeRequestBackground()
+        }
     }
 
     private val requestBackground = registerForActivityResult(

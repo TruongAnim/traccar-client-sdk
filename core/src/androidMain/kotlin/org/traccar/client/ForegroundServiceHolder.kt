@@ -1,5 +1,6 @@
 package org.traccar.client
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -39,13 +40,13 @@ class ForegroundServiceHolder(
     private fun start() {
         val intent = Intent(appContext, TrackerService::class.java)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && TrackerService.hasNotificationPermission(appContext)) {
                 appContext.startForegroundService(intent)
             } else {
                 appContext.startService(intent)
             }
         } catch (e: IllegalStateException) {
-            Log.log("Foreground service start blocked: $e")
+            Log.log("Service start blocked: $e")
         }
     }
 
@@ -84,6 +85,7 @@ class TrackerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startInForeground(settings: NotificationConfig): Boolean {
+        if (!hasNotificationPermission(this)) return true
         val notification = buildNotification(settings)
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -111,6 +113,10 @@ class TrackerService : Service() {
     companion object {
         private const val CHANNEL_ID = "tracker"
         private const val NOTIFICATION_ID = 0x7AC0
+
+        internal fun hasNotificationPermission(context: Context): Boolean =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                hasPermission(context, Manifest.permission.POST_NOTIFICATIONS)
 
         internal fun ensureNotificationChannel(context: Context) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

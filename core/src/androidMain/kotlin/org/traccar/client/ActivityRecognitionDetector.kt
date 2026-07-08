@@ -1,10 +1,12 @@
 package org.traccar.client
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.google.android.gms.location.ActivityRecognition
 import com.google.android.gms.location.ActivityRecognitionResult
 import com.google.android.gms.location.ActivityTransition
@@ -51,6 +53,12 @@ class ActivityRecognitionDetector(
 
     private fun ensureRegistered() {
         if (pendingIntent != null) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            !hasPermission(appContext, Manifest.permission.ACTIVITY_RECOGNITION)
+        ) {
+            Log.log("Activity recognition permission missing, skipping")
+            return
+        }
         val newPendingIntent = PendingIntent.getBroadcast(
             appContext,
             0,
