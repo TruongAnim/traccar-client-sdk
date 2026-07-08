@@ -1,3 +1,7 @@
+## 1.0.2
+
+* Republish 1.0.1 with the native Android (Maven Central) and iOS (XCFramework) SDK included. The 1.0.1 release published only the Dart side, so the native fixes below did not actually reach Android and iOS consumers; 1.0.2 ships them properly.
+
 ## 1.0.1
 
 * Fix an Android crash in the one-off `requestPosition` path when location permission is not granted (`SecurityException: uid ... does not have ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION`). Unlike `start`, the single-fix path went straight to the platform location API without checking permission, so the OS threw a raw `SecurityException`. It now ensures permission first — prompting the same way `start` does — and throws a clean `IllegalStateException` ("Location permission denied") on denial instead of an uncatchable-looking platform error.
