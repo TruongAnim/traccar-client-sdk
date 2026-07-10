@@ -1,3 +1,8 @@
+## 1.0.4
+
+* Harden the iOS plugin bridge against an uninitialized tracker. `start`, `setConfig`, and `updateConfig` force-unwrapped `sharedTracker()`, so invoking any of them before `init` crashed the app; they now guard the optional and return a clean `notInitialized` `FlutterError` instead.
+* Fix `requestPosition` always reporting success on iOS. The Kotlin/Native suspend `Boolean` arrives boxed as a `KotlinBoolean`, and the raw box was returned to the method channel instead of a Swift `Bool`, so callers could not tell whether the upload actually succeeded. It is now unboxed with `.boolValue`, propagating the real result (and `false` when the tracker is absent).
+
 ## 1.0.3
 
 * Add the missing SQLDelight migration for the persistent `State` table. State persistence was added to the schema without a migration file, so the schema version never advanced past 1 — databases created before the state store existed stayed on the old schema and never gained the table, and reading or writing tracker state on those installs failed with `no such table: State`. The migration bumps the schema to version 2 and creates the table on upgrade (`CREATE TABLE IF NOT EXISTS State`, so installs that already have it are unaffected), restoring cross-process state persistence without a reinstall.
