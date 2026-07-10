@@ -22,12 +22,18 @@ public class TraccarClientSdkPlugin: NSObject, FlutterPlugin {
       let args = call.arguments as! [String: Any]
       let config = parseConfig(args)
       runHandler(result) {
-        _ = try await TrackerKt.sharedTracker()!.updateConfig(newConfig: config)
+        guard let tracker = try await TrackerKt.sharedTracker() else {
+          return FlutterError(code: "notInitialized", message: "Tracker not initialized", details: nil)
+        }
+        _ = try await tracker.updateConfig(newConfig: config)
         return nil
       }
     case "start":
       runHandler(result) {
-        try await TrackerKt.sharedTracker()!.start()
+        guard let tracker = try await TrackerKt.sharedTracker() else {
+          return FlutterError(code: "notInitialized", message: "Tracker not initialized", details: nil)
+        }
+        try await tracker.start()
         return nil
       }
     case "stop":
@@ -38,7 +44,8 @@ public class TraccarClientSdkPlugin: NSObject, FlutterPlugin {
     case "requestPosition":
       let alarm = (call.arguments as? [String: Any])?["alarm"] as? String
       runHandler(result) {
-        return try await TrackerKt.sharedTracker()?.requestPosition(alarm: alarm) ?? false
+        let uploaded = try await TrackerKt.sharedTracker()?.requestPosition(alarm: alarm)
+        return uploaded?.boolValue ?? false
       }
     case "isTracking":
       runHandler(result) {
