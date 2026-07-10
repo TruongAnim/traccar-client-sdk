@@ -1,3 +1,7 @@
+## 1.0.3
+
+* Add the missing SQLDelight migration for the persistent `State` table. State persistence was added to the schema without a migration file, so the schema version never advanced past 1 — databases created before the state store existed stayed on the old schema and never gained the table, and reading or writing tracker state on those installs failed with `no such table: State`. The migration bumps the schema to version 2 and creates the table on upgrade (`CREATE TABLE IF NOT EXISTS State`, so installs that already have it are unaffected), restoring cross-process state persistence without a reinstall.
+
 ## 1.0.2
 
 * Republish 1.0.1 with the native Android (Maven Central) and iOS (XCFramework) SDK included. The 1.0.1 release published only the Dart side, so the native fixes below did not actually reach Android and iOS consumers; 1.0.2 ships them properly.
