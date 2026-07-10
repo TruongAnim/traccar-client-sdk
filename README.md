@@ -1,6 +1,6 @@
 # Traccar Client SDK
 
-A Kotlin Multiplatform background location tracking SDK for [Traccar](https://www.traccar.org) - and any other server that accepts the same simple HTTP GET protocol. Runs on Android and iOS, persists positions in a local SQLite queue, and uploads them with network-aware retry.
+A Kotlin Multiplatform background location tracking SDK for [Traccar](https://www.traccar.org) - and any other server that accepts the same simple HTTP protocol. Runs on Android and iOS, persists positions in a local SQLite queue, and uploads them with network-aware retry.
 
 This repository publishes two artifacts:
 
@@ -13,42 +13,49 @@ This repository publishes two artifacts:
 
 ```kotlin
 dependencies {
-    implementation("org.traccar:traccar-client-sdk:0.0.11")
+    implementation("org.traccar:traccar-client-sdk:1.0.4")
 }
 ```
 
 ### iOS (Swift Package Manager)
 
 ```swift
-.package(url: "https://github.com/traccar/traccar-client-sdk.git", from: "0.0.11")
+.package(url: "https://github.com/traccar/traccar-client-sdk.git", from: "1.0.4")
 ```
 
 ### Flutter
 
 ```yaml
 dependencies:
-  traccar_client_sdk: ^0.0.11
+  traccar_client_sdk: ^1.0.4
 ```
 
 ## Quick start
 
 ### Android (Kotlin)
 
+`sharedTracker(config)` builds (and persists) the tracker; `startTracking` is a suspend extension that requests any missing permissions and then starts the engine.
+
 ```kotlin
 val config = Config(
     serverUrl = "https://demo.traccar.org",
     deviceId = "123456",
 )
-// suspend; returns false if required permissions were denied.
-Tracker.shared(activity).start(activity, config)
+val tracker = sharedTracker(config)
+
+// suspend; requests permissions then starts tracking.
+// throws IllegalStateException if location permission is denied.
+tracker.startTracking(activity)
 
 // later
-Tracker.shared(context).stop(context)
+tracker.stop()
 ```
 
-`start` requires a `ComponentActivity` because it launches a transparent permission activity if location, notification, or activity-recognition permissions are not yet granted.
+`startTracking` requires a `ComponentActivity` because it launches a transparent permission activity if location, notification, or activity-recognition permissions are not yet granted. On a later launch, `sharedTracker()` (no arguments) rebuilds the tracker from the persisted config.
 
 ### iOS (Swift)
+
+The tracker is created from the Kotlin/Native framework via `TrackerKt.sharedTracker(config:)`, then started with `start()`.
 
 ```swift
 import TraccarClientSDK
@@ -57,13 +64,11 @@ let config = Config(
     serverUrl: "https://demo.traccar.org",
     deviceId: "123456"
 )
-Tracker.shared.start(config: config)
-
-// in AppDelegate.application(_:didFinishLaunchingWithOptions:)
-Tracker.shared.resume()
+let tracker = try await TrackerKt.sharedTracker(config: config)
+try await tracker?.start()
 ```
 
-`Tracker.resume()` reloads the saved config and restarts the engine if iOS launches the app in the background in response to a significant location change or region exit. Without it, those background wakes are silent.
+On a background wake (significant location change or region exit), reconstruct the tracker with `TrackerKt.sharedTracker()` (no arguments) — it reloads the saved config and re-attaches the OS signals. Do this from your app launch path so those background wakes aren't silent.
 
 ### Flutter
 
@@ -72,14 +77,18 @@ import 'package:traccar_client_sdk/traccar_client_sdk.dart';
 
 final tracker = TraccarClientSdk();
 
-await tracker.start(Config(
+// seed the config once (idempotent), then start.
+await tracker.init(Config(
   serverUrl: 'https://demo.traccar.org',
   deviceId: '123456',
 ));
+await tracker.start();
 
 // later
 await tracker.stop();
 ```
+
+Use `setConfig` to change settings on an already-initialized tracker.
 
 ## Configuration
 
@@ -92,6 +101,7 @@ await tracker.stop();
 | `location` | `LocationConfig` | defaults | Tuning parameters for the location pipeline. |
 | `wakeLock` | `Boolean` | `false` | Hold a partial CPU wakelock while tracking (Android only). |
 | `buffer` | `Boolean` | `true` | When `true`, persist positions to a local SQLite queue and retry on failure. When `false`, attempt direct upload per position and drop on failure (real-time only). |
+| `preferPlatformProviders` | `Boolean` | `false` | Android only. When `true`, use the platform `LocationManager` directly even if Google Play Services is available. Default picks the Fused provider when Play Services is present. Ignored on iOS. |
 | `notification` | `NotificationConfig` | defaults | Foreground-service notification text (Android only). |
 
 ### `LocationConfig`
@@ -105,8 +115,9 @@ await tracker.stop();
 | `stopDetection` | `Boolean` | `true` | Pause GPS while the user is stationary (motion-aware). |
 | `stopTimeoutSeconds` | `Int` | `60` | How long the user must be detected as STILL before location updates pause. |
 | `stationaryRadiusMeters` | `Int` | `100` | iOS only - radius of the geofence monitored around the stationary point. |
+| `heartbeatIntervalSeconds` | `Int` | `0` | Background heartbeat interval. `0` disables. See the iOS background-task setup below. |
 
-`Accuracy.HIGHEST` is a special mode: it overrides `distanceMeters = 0`, `intervalSeconds = 0`, and `stopDetection = false`, requesting the maximum-rate stream from the OS. Use it for navigation-style scenarios where battery is not a concern.
+`Accuracy.HIGHEST` is a special mode: it zeroes `distanceMeters` and `intervalSeconds` for the OS request, asking for the maximum-rate stream. Use it for navigation-style scenarios where battery is not a concern. (Set `stopDetection = false` yourself if you also want to keep GPS running while stationary.)
 
 | Accuracy | Android (Fused) | Android (Plain) | iOS |
 |---|---|---|---|
@@ -123,29 +134,32 @@ await tracker.stop();
 
 ## API
 
+All native (Kotlin/Swift) calls are suspend/async. `Tracker` is obtained from `sharedTracker(...)`; the Flutter plugin wraps a single `TraccarClientSdk` instance.
+
 | Method | Kotlin (Android) | Swift (iOS) | Dart (Flutter) | Notes |
 |---|---|---|---|---|
-| Start tracking | `Tracker.shared(ctx).start(activity, config): Boolean` (suspend) | `Tracker.shared.start(config:)` | `tracker.start(config)` | Returns `false` on Android if required permissions were denied. |
-| Stop tracking | `Tracker.shared(ctx).stop(context)` | `Tracker.shared.stop()` | `tracker.stop()` | Stops the engine and clears the persisted config. |
-| Resume after background wake | n/a | `Tracker.shared.resume()` | n/a | iOS only. Reloads saved config and restarts the engine if not already running. |
-| Query state | `Tracker.shared(ctx).isTracking` | `Tracker.shared.isTracking` | `tracker.isTracking()` | Boolean. |
-| One-off fix and upload | `Tracker.shared(ctx).requestPosition(ctx, config)` | `Tracker.shared.requestPosition(config:)` | `tracker.requestPosition(config)` | Independent of `start` / `stop`. Disables stop-detection for the request and times out after 30s. |
-| Read diagnostic log | `Tracker.shared(ctx).getLogs(): List<LogEntry>` | `Tracker.shared.getLogs()` | `tracker.getLogs()` | Returns recent entries with `time` (epoch ms) and `message`. |
-| Clear diagnostic log | `Tracker.shared(ctx).clearLogs()` | `Tracker.shared.clearLogs()` | `tracker.clearLogs()` | |
+| Create tracker | `sharedTracker(config): Tracker` | `TrackerKt.sharedTracker(config:)` | `tracker.init(config)` | Persists the config. `sharedTracker()` with no argument rebuilds from the saved config. Flutter `init` is idempotent. |
+| Start tracking | `tracker.startTracking(activity)` | `tracker.start()` | `tracker.start()` | Android `startTracking` requests permissions and throws `IllegalStateException` if location is denied; Flutter `start` throws a `PlatformException` on denial. |
+| Stop tracking | `tracker.stop()` | `tracker.stop()` | `tracker.stop()` | Stops the engine. The persisted config is retained. |
+| Update config | `tracker.updateConfig(config): Tracker` | `tracker.updateConfig(newConfig:)` | `tracker.setConfig(config)` | Rebuilds the engine with the new config. Kotlin/Swift return a new `Tracker`. |
+| Query state | `tracker.state` (`StateFlow<State>`, `.enabled`) | `tracker.state` | `tracker.isTracking(): Boolean` | Native exposes a `State` flow whose `enabled` field is the tracking flag; Flutter exposes a boolean getter. |
+| One-off fix and upload | `tracker.requestPosition(context, alarm)` | `tracker.requestPosition(alarm:)` | `tracker.requestPosition(alarm:)` | Independent of `start` / `stop`. Returns whether the upload succeeded. Optional `alarm` tags the upload with the Traccar `alarm` field. The one-off path does not buffer. |
+| Read diagnostic log | `tracker.getLogs(): List<LogEntry>` | `tracker.getLogs()` | `tracker.getLogs()` | Returns recent entries with `time` (epoch ms) and `message`. |
+| Clear diagnostic log | `tracker.clearLogs()` | `tracker.clearLogs()` | `tracker.clearLogs()` | |
 
 ## How it works
 
 The pipeline is the same on both platforms:
 
 ```
-PositionProvider → LocationFilter → TrackerEngine → PositionQueue → HttpUploader → server
+LocationSource → LocationFilter → TrackerEngine → PositionQueue → HttpUploader → server
 ```
 
-- **PositionProvider** - wraps the platform location API. On Android, `FusedLocationProvider` is preferred when Google Play Services is available, otherwise `AndroidLocationProvider` (plain `LocationManager`). On iOS, `IosLocationProvider` wraps `CLLocationManager`. Each provider also subscribes to activity recognition so the engine can pause GPS while the user is stationary.
+- **LocationSource** - wraps the platform location API. On Android, `FusedLocationSource` is preferred when Google Play Services is available, otherwise `AndroidLocationSource` (plain `LocationManager`); set `Config.preferPlatformProviders = true` to force the latter. On iOS, `IosLocationSource` wraps `CLLocationManager`. Each source also subscribes to activity recognition so the engine can pause GPS while the user is stationary.
 - **LocationFilter** - application-level OR filter: a position is accepted if it satisfies any of the time, distance, or angle thresholds.
 - **TrackerEngine** - collects accepted positions and, depending on `Config.buffer`, either enqueues them for retry-on-failure upload or attempts a direct upload per position. Sync loop uses exponential backoff (5s → 5min) on upload failure and waits on `NetworkMonitor` when offline.
 - **PositionQueue / DatabaseQueue** - SQLite-backed FIFO queue (via SQLDelight). Survives app and OS restarts.
-- **HttpUploader** - Ktor client; sends each position as an HTTP GET with query parameters (`id`, `lat`, `lon`, `timestamp`, `accuracy`, optionally `altitude`, `speed` in knots, `bearing`, `batt`). This is the OsmAnd-style protocol Traccar consumes; any server that accepts the same params can be the endpoint. Returns success on any 2xx.
+- **HttpUploader** - Ktor client; sends each position as an HTTP POST with form parameters (`id`, `timestamp` in seconds, and, when present, `lat`, `lon`, `accuracy`, `altitude`, `speed` in knots, `bearing`, `batt`, `charge`, `alarm`). This is the OsmAnd-style protocol Traccar consumes; any server that accepts the same params can be the endpoint. Returns success on any 2xx.
 - **NetworkMonitor** - platform-specific connectivity observer used by the sync loop to wait for the network before retrying.
 
 ### Filters and OS request shape (Android)
@@ -185,7 +199,7 @@ Realistic limits: aggressive OEM task killers (Xiaomi/Huawei) can ignore Android
 
 - **Significant Location Changes** (`startMonitoringSignificantLocationChanges`) - the key API that wakes the app from a terminated state on roughly ~500m shifts.
 - **Region monitoring** - when the SDK detects the user is stationary it registers a `CLCircularRegion` around the spot so iOS wakes the app on exit.
-- **`Tracker.resume()`** - must be called from `application(_:didFinishLaunchingWithOptions:)` (or equivalent) so SLC / region wakes actually restart the engine.
+- **Reconstruct on launch** - rebuild the tracker with `TrackerKt.sharedTracker()` from your app launch path (`application(_:didFinishLaunchingWithOptions:)` or equivalent) so SLC / region wakes reload the persisted config and re-attach the OS signals.
 
 Realistic limits: user-initiated force-quit from the App Switcher disables SLC until the user reopens the app; phone reboot requires the user to open the app once before tracking resumes (iOS has no `BootReceiver` equivalent); Low Power Mode can reduce wake frequency.
 
@@ -201,7 +215,7 @@ The SDK manifest already declares:
 - `POST_NOTIFICATIONS` (Android 13+)
 - `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`, `INTERNET`, `ACCESS_NETWORK_STATE`
 
-Runtime permission prompts (location, notifications, activity recognition, background location) are launched automatically by `start`. On first start, the SDK also opens the *Ignore Battery Optimization* settings screen once.
+Runtime permission prompts (location, notifications, activity recognition, background location) are launched automatically by `startTracking`. On first start, the SDK also opens the *Ignore Battery Optimization* settings screen once.
 
 ### iOS (in your `Info.plist`)
 
