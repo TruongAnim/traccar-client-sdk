@@ -1,0 +1,31 @@
+{
+  "name": "@traccar/react-native-client-sdk",
+  "version": "1.0.5",
+  "description": "React Native module for background location tracking. Wraps the Traccar Client SDK for Android and iOS.",
+  "main": "src/index.tsx",
+  "module": "src/index.tsx",
+  "types": "src/index.tsx",
+  "react-native": "src/index.tsx",
+  "source": "src/index.tsx",
+  "files": [
+    "src",
+    "android",
+    "ios",
+    "react-native-client-sdk.podspec",
+    "!**/build",
+    "!**/node_modules"
+  ],
+  "keywords": [
+    "react-native",
+    "traccar",
+    "location",
+    "gps",
+    "tracking"
+  ],
+  "repository": "https://github.com/traccar/traccar-client-sdk",
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

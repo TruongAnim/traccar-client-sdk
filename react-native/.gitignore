@@ -1,0 +1,19 @@
+node_modules/
+lib/
+*.log
+
+# Local test harness — kept for development, not committed
+example/
+
+# Android
+android/build/
+android/.gradle/
+android/local.properties
+
+# iOS
+ios/TraccarClientSDK.xcframework/
+ios/Pods/
+ios/build/
+
+# npm pack artifact
+*.tgz
