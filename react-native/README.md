@@ -1,4 +1,4 @@
-# @traccar/react-native-client-sdk
+# react-native-traccar-client-sdk
 
 React Native module for background location tracking. Wraps the
 [Traccar Client SDK](https://github.com/traccar/traccar-client-sdk) for Android
@@ -7,7 +7,7 @@ and iOS.
 ## Installation
 
 ```sh
-npm install @traccar/react-native-client-sdk
+npm install react-native-traccar-client-sdk
 cd ios && pod install
 ```
 
@@ -45,7 +45,7 @@ cp -R core/build/XCFrameworks/release/TraccarClientSDK.xcframework \
 ## Usage
 
 ```ts
-import * as Traccar from '@traccar/react-native-client-sdk';
+import * as Traccar from 'react-native-traccar-client-sdk';
 
 await Traccar.init({
   serverUrl: 'https://demo.traccar.org',

@@ -4,7 +4,7 @@ package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 version = package["version"]
 
 Pod::Spec.new do |spec|
-  spec.name         = "react-native-client-sdk"
+  spec.name         = "react-native-traccar-client-sdk"
   spec.version      = version
   spec.summary      = package["description"]
   spec.homepage     = package["repository"]
