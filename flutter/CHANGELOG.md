@@ -1,3 +1,7 @@
+## 1.0.5
+
+* Fix a crash-loop on the persistent position queue (`no such column: charging` while reading the `Position` table). The `charging` column — like `altitude`/`speed`/`bearing`/`battery` before it — was added to the `Position` table definition without a matching migration, so it only reached fresh installs; databases created before it existed never gained the column. The schema version only advanced when the `State` migration shipped in 1.0.3, and that migration left `Position` untouched, so affected installs crash-looped on every read of the upload queue with no way to recover short of reinstalling. A new migration bumps the schema to version 3 and rebuilds `Position` with the current columns, preserving already-queued rows.
+
 ## 1.0.4
 
 * Harden the iOS plugin bridge against an uninitialized tracker. `start`, `setConfig`, and `updateConfig` force-unwrapped `sharedTracker()`, so invoking any of them before `init` crashed the app; they now guard the optional and return a clean `notInitialized` `FlutterError` instead.
