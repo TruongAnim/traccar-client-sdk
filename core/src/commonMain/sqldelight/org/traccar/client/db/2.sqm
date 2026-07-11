@@ -1,0 +1,20 @@
+ALTER TABLE Position RENAME TO Position_old;
+
+CREATE TABLE Position (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    latitude REAL,
+    longitude REAL,
+    accuracy REAL,
+    time INTEGER NOT NULL,
+    altitude REAL,
+    speed REAL,
+    bearing REAL,
+    battery INTEGER,
+    charging INTEGER
+);
+
+INSERT INTO Position(latitude, longitude, accuracy, time, altitude, speed, bearing, battery)
+SELECT latitude, longitude, accuracy, time, altitude, speed, bearing, battery
+FROM Position_old;
+
+DROP TABLE Position_old;
