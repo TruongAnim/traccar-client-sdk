@@ -1,3 +1,7 @@
+## 1.0.6
+
+* Fix a crash when location permission is revoked while tracking is active. `AndroidLocationSource` and `FusedLocationSource` requested location updates from within a state observer without catching `SecurityException`. If the OS-level location permission was lost while the foreground service kept running, the next transition to active tracking called `requestLocationUpdates` with no permission, and the resulting `SecurityException` propagated out of the observer coroutine and crashed the app. The framework calls in both location sources — continuous updates and the one-off position fetch — now catch `SecurityException` and log it instead, so tracking stops cleanly and resumes once permission is restored.
+
 ## 1.0.5
 
 * Fix a crash-loop on the persistent position queue (`no such column: charging` while reading the `Position` table). The `charging` column — like `altitude`/`speed`/`bearing`/`battery` before it — was added to the `Position` table definition without a matching migration, so it only reached fresh installs; databases created before it existed never gained the column. The schema version only advanced when the `State` migration shipped in 1.0.3, and that migration left `Position` untouched, so affected installs crash-looped on every read of the upload queue with no way to recover short of reinstalling. A new migration bumps the schema to version 3 and rebuilds `Position` with the current columns, preserving already-queued rows.
