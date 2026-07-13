@@ -35,10 +35,14 @@ class AndroidLocationSource(
 
     init {
         scope.observeState(state, State::locationMode, inactive = LocationMode.Off) { mode ->
-            when (mode) {
-                LocationMode.Active -> ensureStarted()
-                LocationMode.Stationary -> ensureStopped(awaitFinalFix = true)
-                LocationMode.Off -> ensureStopped(awaitFinalFix = false)
+            try {
+                when (mode) {
+                    LocationMode.Active -> ensureStarted()
+                    LocationMode.Stationary -> ensureStopped(awaitFinalFix = true)
+                    LocationMode.Off -> ensureStopped(awaitFinalFix = false)
+                }
+            } catch (e: SecurityException) {
+                Log.log("Location permission missing: $e")
             }
         }
     }
@@ -57,10 +61,13 @@ class AndroidLocationSource(
         stopUpdates()
     }
 
-    override suspend fun fetchOnce(): Position? {
+    override suspend fun fetchOnce(): Position? = try {
         val fresh = withTimeoutOrNull(LOCATION_FETCH_TIMEOUT) { awaitCurrentLocation() }
-        return (fresh ?: locationManager.getLastKnownLocation(locationConfig.accuracy.toAndroidProvider()))
+        (fresh ?: locationManager.getLastKnownLocation(locationConfig.accuracy.toAndroidProvider()))
             ?.toPosition()
+    } catch (e: SecurityException) {
+        Log.log("Location permission missing: $e")
+        null
     }
 
     private fun startUpdates() {
