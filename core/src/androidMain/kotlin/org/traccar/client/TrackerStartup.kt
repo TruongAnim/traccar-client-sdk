@@ -12,6 +12,7 @@ internal lateinit var applicationContext: Context
 class TrackerStartup : ContentProvider() {
     override fun onCreate(): Boolean {
         applicationContext = checkNotNull(context).applicationContext
+        TrackerService.ensureNotificationChannel(applicationContext)
         return true
     }
 
