@@ -40,24 +40,39 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: ./gradlew :core:assembleTraccarClientSDKReleaseXCFramework
 
-      - name: Prepare release commit and tag
+      - name: Prepare release commits and tag
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Generate the changelog entry from commit subjects since the previous release
+          PREV=$(git tag --list 'v*' --sort=-v:refname | grep -vFx "${GITHUB_REF_NAME}" | head -1 || true)
+          RANGE="${PREV:+${PREV}..}HEAD"
+          BULLETS=$(git log --no-merges --pretty='* %s' "$RANGE" | grep -vE '^\* (Release |Package\.swift )' || true)
+          { printf '## %s\n\n%s\n\n' "${VERSION}" "$BULLETS"; cat flutter/CHANGELOG.md; } > flutter/CHANGELOG.md.tmp
+          mv flutter/CHANGELOG.md.tmp flutter/CHANGELOG.md
+
+          # Version stamps that belong on main
+          sed -i '' "s/^version: .*/version: ${VERSION}/" flutter/pubspec.yaml
+          sed -i '' "s|traccar_client_sdk: \^.*|traccar_client_sdk: ^${VERSION}|" flutter/README.md
+          sed -i '' "s|traccar-client-sdk:[^\"]*|traccar-client-sdk:${VERSION}|" flutter/android/build.gradle.kts
+          sed -i '' "s|exact: \"[^\"]*\"|exact: \"${VERSION}\"|" flutter/ios/traccar_client_sdk/Package.swift
+          sed -i '' "s|\"version\": \"[^\"]*\"|\"version\": \"${VERSION}\"|" react-native/package.json
+          sed -i '' "s|traccar-client-sdk:[^\"]*|traccar-client-sdk:${VERSION}|" react-native/android/build.gradle
+          git add flutter/CHANGELOG.md flutter/pubspec.yaml flutter/README.md flutter/android/build.gradle.kts flutter/ios/traccar_client_sdk/Package.swift react-native/package.json react-native/android/build.gradle
+          git commit -m "Release ${VERSION}"
+          git push origin HEAD:main
+
+          # Package.swift pointing at the released XCFramework — only on the tag, never on main
           (cd core/build/XCFrameworks/release && zip -r -y TraccarClientSDK.xcframework.zip TraccarClientSDK.xcframework)
           CHECKSUM=$(swift package compute-checksum core/build/XCFrameworks/release/TraccarClientSDK.xcframework.zip)
           ASSET_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/TraccarClientSDK.xcframework.zip"
           sed -i '' "s|path: \"core/build/XCFrameworks/release/TraccarClientSDK.xcframework\"|url: \"$ASSET_URL\", checksum: \"$CHECKSUM\"|" Package.swift
           grep -q "$CHECKSUM" Package.swift
-          sed -i '' "s/^version: .*/version: ${VERSION}/" flutter/pubspec.yaml
-          sed -i '' "s|traccar-client-sdk:[^\"]*|traccar-client-sdk:${VERSION}|" flutter/android/build.gradle.kts
-          sed -i '' "s|exact: \"[^\"]*\"|exact: \"${VERSION}\"|" flutter/ios/traccar_client_sdk/Package.swift
-          sed -i '' "s|\"version\": \"[^\"]*\"|\"version\": \"${VERSION}\"|" react-native/package.json
-          sed -i '' "s|traccar-client-sdk:[^\"]*|traccar-client-sdk:${VERSION}|" react-native/android/build.gradle
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Package.swift flutter/pubspec.yaml flutter/android/build.gradle.kts flutter/ios/traccar_client_sdk/Package.swift react-native/package.json react-native/android/build.gradle
-          git commit -m "Release ${GITHUB_REF_NAME}"
+          git add Package.swift
+          git commit -m "Package.swift for ${VERSION}"
           git tag -f "${GITHUB_REF_NAME}"
           git push -f origin "${GITHUB_REF_NAME}"
 
