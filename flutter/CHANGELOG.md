@@ -1,3 +1,10 @@
+## 1.0.7
+
+* Automate version stamping and changelog in release
+* Create notification channel at startup
+* Update plugin versions to 1.0.6
+* Update README files
+
 ## 1.0.6
 
 * Fix a crash when location permission is revoked while tracking is active. `AndroidLocationSource` and `FusedLocationSource` requested location updates from within a state observer without catching `SecurityException`. If the OS-level location permission was lost while the foreground service kept running, the next transition to active tracking called `requestLocationUpdates` with no permission, and the resulting `SecurityException` propagated out of the observer coroutine and crashed the app. The framework calls in both location sources — continuous updates and the one-off position fetch — now catch `SecurityException` and log it instead, so tracking stops cleanly and resumes once permission is restored.
