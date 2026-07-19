@@ -92,6 +92,7 @@ class IosLocationSource(
                 locationConfig.distanceMeters.toDouble()
             }
             allowsBackgroundLocationUpdates = true
+            pausesLocationUpdatesAutomatically = false
         }
 
         val authorized = when (newManager.authorizationStatus) {
