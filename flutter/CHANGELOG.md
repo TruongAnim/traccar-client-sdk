@@ -1,3 +1,7 @@
+## 1.0.8
+
+* Disable automatic location pausing on iOS
+
 ## 1.0.7
 
 * Automate version stamping and changelog in release
