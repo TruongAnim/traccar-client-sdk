@@ -76,7 +76,8 @@ class LocationFilter(
         // The one entry that explains an otherwise silent gap in the track:
         // a fix did arrive, and here is exactly how far short it fell.
         Log.detail(
-            "Location skipped ${position.latitude},${position.longitude}: " +
+            key = "location-skipped",
+            message = "Location skipped ${position.latitude},${position.longitude}: " +
                 skipReason(movedMeters, elapsedMillis, turnedDegrees),
         )
         return null

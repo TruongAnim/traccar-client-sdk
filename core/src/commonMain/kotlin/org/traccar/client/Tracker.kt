@@ -87,6 +87,7 @@ private suspend fun install(koin: Koin, config: Config): Tracker {
     val stateStore = StateStore.create(koin.get())
     koin.declare(stateStore)
     koin.declare(config)
+    Log.detailIntervalMillis = config.detailLogIntervalSeconds.coerceAtLeast(0) * 1000L
     if (!config.location.stopDetection) {
         stateStore.update { it.copy(paused = false) }
     }

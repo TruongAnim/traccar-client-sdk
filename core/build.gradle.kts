@@ -26,6 +26,9 @@ kotlin {
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         androidResources.enable = true
+        // commonTest declared a kotlin("test") dependency but no target ever
+        // ran it. A JVM host test compilation makes the source set real.
+        withHostTestBuilder {}.configure { }
     }
 
     val xcframework = XCFramework("TraccarClientSDK")

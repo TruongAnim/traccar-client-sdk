@@ -10,6 +10,12 @@ data class Config(
     val wakeLock: Boolean = false,
     val buffer: Boolean = true,
     val preferPlatformProviders: Boolean = false,
+    /**
+     * Seconds between two detail log entries of the same kind. Recurring
+     * diagnostics such as a skipped fix would otherwise arrive as fast as the
+     * platform delivers positions. Zero records every one of them.
+     */
+    val detailLogIntervalSeconds: Int = 5,
     val notification: NotificationConfig = NotificationConfig(),
 ) {
     constructor(serverUrl: String, deviceId: String) : this(serverUrl, deviceId, LocationConfig())

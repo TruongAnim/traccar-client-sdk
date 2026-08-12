@@ -129,7 +129,10 @@ class ActivityRecognitionDetector(
         val result = ActivityRecognitionResult.extractResult(intent) ?: return
         stopSampling()
         val activity = result.mostProbableActivity
-        Log.detail("Activity sample: ${activityName(activity.type)} ${activity.confidence}%")
+        Log.detail(
+            key = "activity-sample",
+            message = "Activity sample: ${activityName(activity.type)} ${activity.confidence}%",
+        )
         if (activity.type == DetectedActivity.STILL) onStillEnter()
     }
 
@@ -167,7 +170,7 @@ class ActivityRecognitionDetector(
 
 class ActivityRecognitionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        Log.detail("Activity recognition broadcast received")
+        Log.detail(key = "activity-broadcast", message = "Activity recognition broadcast received")
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
