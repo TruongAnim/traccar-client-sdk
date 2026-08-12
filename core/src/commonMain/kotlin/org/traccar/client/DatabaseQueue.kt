@@ -6,12 +6,14 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.traccar.client.db.Database
 
 class DatabaseQueue(driver: SqlDriver) : PositionQueue {
 
     private val queries = Database(driver).positionQueries
     private val mutex = Mutex()
+    private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun enqueue(position: Position) {
         withContext(Dispatchers.IO) {
@@ -26,6 +28,9 @@ class DatabaseQueue(driver: SqlDriver) : PositionQueue {
                     bearing = position.bearing,
                     battery = position.battery?.toLong(),
                     charging = position.charging?.let { if (it) 1L else 0L },
+                    extras = position.extras
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { json.encodeToString(it) },
                 )
             }
         }
@@ -44,6 +49,12 @@ class DatabaseQueue(driver: SqlDriver) : PositionQueue {
                     bearing = row.bearing,
                     battery = row.battery?.toInt(),
                     charging = row.charging?.let { it != 0L },
+                    // A row written before this column existed, or holding
+                    // something unreadable, must not stall the whole queue.
+                    extras = row.extras?.let { raw ->
+                        runCatching { json.decodeFromString<Map<String, String>>(raw) }
+                            .getOrElse { emptyMap() }
+                    } ?: emptyMap(),
                 )
             }
         }

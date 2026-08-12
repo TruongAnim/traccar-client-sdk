@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
+import android.os.Build
 import android.os.CancellationSignal
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -149,7 +150,25 @@ class AndroidLocationSource(
         altitude = altitude.takeIf { hasAltitude() && it.isFinite() },
         speed = speed.toDouble().takeIf { hasSpeed() && it.isFinite() },
         bearing = bearing.toDouble().takeIf { hasBearing() && it.isFinite() },
+        extras = telemetry(),
     )
+
+    private fun Location.telemetry(): Map<String, String> = buildMap {
+        provider?.takeIf { it.isNotBlank() }?.let { put(Telemetry.PROVIDER, it) }
+        // Only the gps provider reports this, and only once it has a fix.
+        extras?.getInt("satellites", -1)?.takeIf { it > 0 }
+            ?.let { put(Telemetry.SATELLITES, it.toString()) }
+        if (isMockFix()) put(Telemetry.MOCK, "true")
+    }
+
+    private fun Location.isMockFix(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            isMock
+        } else {
+            @Suppress("DEPRECATION")
+            isFromMockProvider
+        }
+
 
     private fun Accuracy.toAndroidProvider(): String {
         val preferred = when (this) {

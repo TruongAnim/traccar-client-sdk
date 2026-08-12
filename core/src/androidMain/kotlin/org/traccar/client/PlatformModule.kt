@@ -16,7 +16,8 @@ internal actual fun platformModule(): Module = module {
     single<SqlDriver> { AndroidSqliteDriver(Database.Schema, get(), "tracker.db") }
     single { HttpClient(Android) }
     single<NetworkMonitor> { AndroidNetworkMonitor(get()) }
-    single<PositionProcessor> { AndroidBatteryProcessor(get()) }
+    single { ActivityState() }
+    single<PositionProcessor> { AndroidDeviceProcessor(get(), get()) }
 
     single<LocationSource> {
         val context = get<Context>()
@@ -32,7 +33,7 @@ internal actual fun platformModule(): Module = module {
         }
     }
 
-    single { ActivityRecognitionDetector(get(), get(), get(), get()) }
+    single { ActivityRecognitionDetector(get(), get(), get(), get(), get()) }
     single { GeofenceDetector(get(), get(), get(), get(), get()) }
     single { WakeLockHolder(get(), get(), get()) }
     single { AlarmHeartbeatTrigger(get(), get(), get(), get()) }

@@ -29,6 +29,7 @@ class ActivityRecognitionDetector(
     context: Context,
     config: Config,
     state: StateFlow<State>,
+    private val activityState: ActivityState,
 ) : SignalSource {
 
     private val stopTimeoutSeconds = config.location.stopTimeoutSeconds
@@ -117,7 +118,13 @@ class ActivityRecognitionDetector(
     private fun handleTransition(intent: Intent) {
         val result = ActivityTransitionResult.extractResult(intent) ?: return
         result.transitionEvents.forEach { event ->
-            Log.log("Activity transition: ${activityName(event.activityType)} ${transitionName(event.transitionType)}")
+            val name = activityName(event.activityType)
+            Log.log("Activity transition: $name ${transitionName(event.transitionType)}")
+            // A transition is a stronger statement than a sample, and carries
+            // no confidence of its own.
+            if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                activityState.update(name, null)
+            }
             if (event.activityType != DetectedActivity.STILL) return@forEach
             if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) onStillEnter()
             else onStillExit()
@@ -129,6 +136,7 @@ class ActivityRecognitionDetector(
         val result = ActivityRecognitionResult.extractResult(intent) ?: return
         stopSampling()
         val activity = result.mostProbableActivity
+        activityState.update(activityName(activity.type), activity.confidence)
         Log.detail(
             key = "activity-sample",
             message = "Activity sample: ${activityName(activity.type)} ${activity.confidence}%",

@@ -14,4 +14,6 @@ data class Position(
     val battery: Int? = null,
     val charging: Boolean? = null,
     val alarm: String? = null,
+    /** Device and environment telemetry. See [Telemetry] for the keys. */
+    val extras: Map<String, String> = emptyMap(),
 )

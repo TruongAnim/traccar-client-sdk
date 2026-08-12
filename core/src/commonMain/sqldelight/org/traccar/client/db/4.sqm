@@ -1,0 +1,3 @@
+-- Queued positions gain telemetry. Nullable so rows written by an older
+-- build still read back, with no telemetry rather than a failed migration.
+ALTER TABLE Position ADD COLUMN extras TEXT;

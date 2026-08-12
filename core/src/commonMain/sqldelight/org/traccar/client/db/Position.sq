@@ -8,15 +8,16 @@ CREATE TABLE Position (
     speed REAL,
     bearing REAL,
     battery INTEGER,
-    charging INTEGER
+    charging INTEGER,
+    extras TEXT
 );
 
 enqueue:
-INSERT INTO Position(latitude, longitude, accuracy, time, altitude, speed, bearing, battery, charging)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO Position(latitude, longitude, accuracy, time, altitude, speed, bearing, battery, charging, extras)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 peek:
-SELECT latitude, longitude, accuracy, time, altitude, speed, bearing, battery, charging
+SELECT latitude, longitude, accuracy, time, altitude, speed, bearing, battery, charging, extras
 FROM Position
 ORDER BY id ASC
 LIMIT 1;

@@ -28,6 +28,11 @@ class HttpUploader(
                 position.battery?.let { append("batt", it.toString()) }
                 position.charging?.let { append("charge", it.toString()) }
                 position.alarm?.let { append("alarm", it) }
+                // Appended last and filtered, so telemetry can add fields but
+                // never redefine the position it describes.
+                position.extras.forEach { (key, value) ->
+                    if (key !in Telemetry.RESERVED && value.isNotEmpty()) append(key, value)
+                }
             },
         )
         Log.log("Upload response ${response.status.value}")
