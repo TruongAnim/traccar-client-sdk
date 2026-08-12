@@ -1,3 +1,7 @@
+## 1.0.9
+
+* Validate location values
+
 ## 1.0.8
 
 * Disable automatic location pausing on iOS
