@@ -5,6 +5,7 @@ import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -32,23 +33,76 @@ class LocationFilter(
         val previous = lastAccepted
         if (previous == null) {
             persistAccepted(position)
-            Log.log("Location accepted ${position.latitude},${position.longitude}")
+            Log.log("Location accepted ${position.latitude},${position.longitude} (first fix)")
             return position
         }
+
+        val elapsedMillis = position.time - previous.time
+        val movedMeters = distance(previous, position)
+        val turnedDegrees =
+            if (previous.bearing != null && position.bearing != null) {
+                bearingChange(previous.bearing, position.bearing)
+            } else {
+                null
+            }
+
         val timeTrigger = locationConfig.intervalSeconds > 0 &&
-            (position.time - previous.time) >= locationConfig.intervalSeconds * 1000L
-        val distanceTrigger = distance(previous, position) >= locationConfig.distanceMeters
+            elapsedMillis >= locationConfig.intervalSeconds * 1000L
+        // Zero means "do not filter on distance", the same way zero means it
+        // for interval and angle. Treating it as a >= 0 comparison instead
+        // made the trigger always fire, which silently disabled the interval
+        // and reported every fix the platform produced.
+        val distanceTrigger = locationConfig.distanceMeters > 0 &&
+            movedMeters >= locationConfig.distanceMeters
         val angleTrigger = locationConfig.angleDegrees > 0 &&
-            previous.bearing != null && position.bearing != null &&
-            bearingChange(previous.bearing, position.bearing) >= locationConfig.angleDegrees
-        if (timeTrigger || distanceTrigger || angleTrigger) {
+            turnedDegrees != null && turnedDegrees >= locationConfig.angleDegrees
+        // With nothing configured there is no criterion to fail.
+        val unfiltered = locationConfig.distanceMeters == 0 &&
+            locationConfig.intervalSeconds == 0 &&
+            locationConfig.angleDegrees == 0
+
+        if (unfiltered || timeTrigger || distanceTrigger || angleTrigger) {
             persistAccepted(position)
-            Log.log("Location accepted ${position.latitude},${position.longitude}")
+            val reason = buildList {
+                if (distanceTrigger) add("moved ${movedMeters.roundToInt()} m")
+                if (timeTrigger) add("elapsed ${elapsedMillis / 1000} s")
+                if (angleTrigger) add("turned ${turnedDegrees!!.roundToInt()}°")
+                if (isEmpty()) add("no filter configured")
+            }.joinToString(" + ")
+            Log.log("Location accepted ${position.latitude},${position.longitude} ($reason)")
             return position
         }
-        Log.log("Location filtered ${position.latitude},${position.longitude}")
+
+        // The one entry that explains an otherwise silent gap in the track:
+        // a fix did arrive, and here is exactly how far short it fell.
+        Log.detail(
+            "Location skipped ${position.latitude},${position.longitude}: " +
+                skipReason(movedMeters, elapsedMillis, turnedDegrees),
+        )
         return null
     }
+
+    private fun skipReason(
+        movedMeters: Double,
+        elapsedMillis: Long,
+        turnedDegrees: Double?,
+    ): String = buildList {
+        if (locationConfig.distanceMeters > 0) {
+            add("moved ${movedMeters.roundToInt()} m of ${locationConfig.distanceMeters} m")
+        }
+        if (locationConfig.intervalSeconds > 0) {
+            add("elapsed ${elapsedMillis / 1000} s of ${locationConfig.intervalSeconds} s")
+        }
+        if (locationConfig.angleDegrees > 0) {
+            add(
+                if (turnedDegrees == null) {
+                    "no bearing reported"
+                } else {
+                    "turned ${turnedDegrees.roundToInt()}° of ${locationConfig.angleDegrees}°"
+                },
+            )
+        }
+    }.joinToString(", ")
 
     private suspend fun persistAccepted(position: Position) {
         lastAccepted = position

@@ -1,20 +1,26 @@
 CREATE TABLE LogEntry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     time INTEGER NOT NULL,
-    message TEXT NOT NULL
+    message TEXT NOT NULL,
+    level TEXT NOT NULL DEFAULT 'info'
 );
 
+CREATE INDEX LogEntry_level ON LogEntry(level, id);
+
 insert:
-INSERT INTO LogEntry(time, message) VALUES (?, ?);
+INSERT INTO LogEntry(time, message, level) VALUES (?, ?, ?);
 
 selectAll:
-SELECT time, message
+SELECT time, message, level
 FROM LogEntry
 ORDER BY id ASC;
 
 clear:
 DELETE FROM LogEntry;
 
-trim:
+-- Trimming is per level on purpose: verbose entries must never evict the
+-- main log, or turning detail on would destroy the history worth keeping.
+trimLevel:
 DELETE FROM LogEntry
-WHERE id <= (SELECT MAX(id) - :keep FROM LogEntry);
+WHERE level = :level
+  AND id <= (SELECT MAX(id) - :keep FROM LogEntry WHERE level = :level);

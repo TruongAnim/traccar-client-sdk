@@ -11,13 +11,18 @@ class LogStore(driver: SqlDriver) {
 
     private val queries = Database(driver).logEntryQueries
 
-    suspend fun insert(message: String) = withContext(Dispatchers.IO) {
-        queries.insert(time = Clock.System.now().toEpochMilliseconds(), message = message)
-    }
+    suspend fun insert(message: String, level: LogLevel = LogLevel.INFO) =
+        withContext(Dispatchers.IO) {
+            queries.insert(
+                time = Clock.System.now().toEpochMilliseconds(),
+                message = message,
+                level = level.key,
+            )
+        }
 
     suspend fun all(): List<LogEntry> = withContext(Dispatchers.IO) {
         queries.selectAll().executeAsList().map {
-            LogEntry(time = it.time, message = it.message)
+            LogEntry(time = it.time, message = it.message, level = LogLevel.fromKey(it.level))
         }
     }
 
@@ -25,7 +30,7 @@ class LogStore(driver: SqlDriver) {
         queries.clear()
     }
 
-    suspend fun trim(keep: Int) = withContext(Dispatchers.IO) {
-        queries.trim(keep.toLong())
+    suspend fun trim(level: LogLevel, keep: Int) = withContext(Dispatchers.IO) {
+        queries.trimLevel(level = level.key, keep = keep.toLong())
     }
 }

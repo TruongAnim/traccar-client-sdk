@@ -115,7 +115,7 @@ class GeofenceDetector(
 
 class GeofenceReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        Log.log("Geofence broadcast received")
+        Log.detail("Geofence broadcast received")
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {

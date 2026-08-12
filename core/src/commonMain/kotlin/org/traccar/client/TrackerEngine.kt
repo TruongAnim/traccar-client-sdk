@@ -48,35 +48,59 @@ class TrackerEngine internal constructor(
 
     private suspend fun applyStationaryEnter() {
         val state = stateStore.state.value
-        if (!state.enabled || state.paused) return
+        if (!state.enabled || state.paused) {
+            Log.detail(
+                "StationaryEnter ignored: " +
+                    if (!state.enabled) "not tracking" else "already paused",
+            )
+            return
+        }
         Log.log("StationaryEnter: pausing")
         stateStore.update { it.copy(paused = true) }
     }
 
     private suspend fun applyStationaryExit() {
         val state = stateStore.state.value
-        if (!state.enabled || !state.paused) return
+        if (!state.enabled || !state.paused) {
+            Log.detail(
+                "StationaryExit ignored: " +
+                    if (!state.enabled) "not tracking" else "already moving",
+            )
+            return
+        }
         Log.log("StationaryExit: resuming")
         stateStore.update { it.copy(paused = false) }
     }
 
     private suspend fun applyHeartbeatTick() {
         val state = stateStore.state.value
-        if (!state.enabled || !state.paused) return
+        if (!state.enabled || !state.paused) {
+            Log.detail(
+                "HeartbeatTick ignored: " +
+                    if (!state.enabled) "not tracking" else "only sent while paused",
+            )
+            return
+        }
         Log.log("HeartbeatTick")
         heartbeatPositions.emit(Position(time = Clock.System.now().toEpochMilliseconds()))
     }
 
     private suspend fun pipelineLoop() {
         merge(locationSource.positions, heartbeatPositions).collect { incoming ->
-            if (!stateStore.state.value.enabled) return@collect
+            if (!stateStore.state.value.enabled) {
+                Log.detail("Position dropped: tracking is off")
+                return@collect
+            }
             var current: Position? = incoming
             for (processor in processors) {
                 current = processor.process(current ?: break)
             }
+            // A null here means a processor rejected it. The one that does so
+            // is LocationFilter, which has already logged the numbers.
             val final = current ?: return@collect
             if (buffer) {
                 queue.enqueue(final)
+                Log.detail("Position queued for upload")
                 pipelineWakeUp.trySend(Unit)
             } else {
                 uploader.upload(final)

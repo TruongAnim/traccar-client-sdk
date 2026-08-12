@@ -38,7 +38,10 @@ class Tracker internal constructor(
             return false
         }
         Log.log("Position fetched ${raw.latitude},${raw.longitude}")
-        val processed = batteryProcessor.process(raw)?.copy(alarm = alarm) ?: return false
+        val processed = batteryProcessor.process(raw)?.copy(alarm = alarm) ?: run {
+            Log.log("Position request dropped by processor")
+            return false
+        }
         return uploader.upload(processed)
     }
 

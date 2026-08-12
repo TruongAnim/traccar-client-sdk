@@ -1,0 +1,3 @@
+ALTER TABLE LogEntry ADD COLUMN level TEXT NOT NULL DEFAULT 'info';
+
+CREATE INDEX IF NOT EXISTS LogEntry_level ON LogEntry(level, id);

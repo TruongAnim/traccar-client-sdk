@@ -27,6 +27,29 @@ class FusedLocationSource(
 
     private val locationConfig = config.location.effective
 
+    init {
+        // `effective` rewrites the request behind the user's back, and the two
+        // cases have opposite consequences: HIGHEST asks for everything, while
+        // a distance filter asks for nothing until the device moves. Saying
+        // which one applies is the difference between a useful log line and a
+        // misleading one.
+        val requested = config.location
+        if (requested.intervalSeconds > 0 && locationConfig.intervalSeconds == 0) {
+            if (requested.accuracy == Accuracy.HIGHEST) {
+                Log.log(
+                    "Accuracy HIGHEST requests fixes as fast as the platform supplies them; " +
+                        "the ${requested.intervalSeconds}s interval is applied by the filter instead",
+                )
+            } else {
+                Log.log(
+                    "Interval ${requested.intervalSeconds}s not requested from the platform " +
+                        "because a ${requested.distanceMeters}m distance filter is set; " +
+                        "fixes arrive on movement only",
+                )
+            }
+        }
+    }
+
     private val appContext = context.applicationContext
     private val client: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(appContext)
@@ -86,7 +109,11 @@ class FusedLocationSource(
             .build()
         client.requestLocationUpdates(request, newCallback, Looper.getMainLooper())
         callback = newCallback
-        Log.log("Location updates started")
+        Log.log(
+            "Location updates started (${locationConfig.accuracy}, " +
+                "every ${locationConfig.intervalSeconds}s, " +
+                "min ${locationConfig.distanceMeters}m)",
+        )
     }
 
     private fun stopUpdates() {
