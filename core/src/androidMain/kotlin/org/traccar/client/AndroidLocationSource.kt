@@ -117,11 +117,11 @@ class AndroidLocationSource(
     private fun Location.toPosition(): Position = Position(
         latitude = latitude,
         longitude = longitude,
-        accuracy = accuracy.toDouble(),
+        accuracy = accuracy.toDouble().takeIf { hasAccuracy() && it.isFinite() },
         time = time,
-        altitude = if (hasAltitude()) altitude else null,
-        speed = if (hasSpeed()) speed.toDouble() else null,
-        bearing = if (hasBearing()) bearing.toDouble() else null,
+        altitude = altitude.takeIf { hasAltitude() && it.isFinite() },
+        speed = speed.toDouble().takeIf { hasSpeed() && it.isFinite() },
+        bearing = bearing.toDouble().takeIf { hasBearing() && it.isFinite() },
     )
 
     private fun Accuracy.toAndroidProvider(): String {
