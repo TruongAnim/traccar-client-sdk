@@ -3,7 +3,9 @@ package org.traccar.client
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,6 +48,12 @@ class Tracker internal constructor(
     }
 
     suspend fun getLogs(): List<LogEntry> = Log.store?.all() ?: emptyList()
+
+    /**
+     * The most recent entries, newest first, re-emitted as they are written.
+     */
+    fun observeLogs(limit: Int = 1000): Flow<List<LogEntry>> =
+        Log.store?.observeRecent(limit) ?: flowOf(emptyList())
 
     suspend fun clearLogs() = Log.store?.clear()
 

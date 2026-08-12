@@ -15,6 +15,12 @@ SELECT time, message, level
 FROM LogEntry
 ORDER BY id ASC;
 
+selectRecent:
+SELECT time, message, level
+FROM LogEntry
+ORDER BY id DESC
+LIMIT :limit;
+
 clear:
 DELETE FROM LogEntry;
 
